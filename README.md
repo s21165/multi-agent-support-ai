@@ -24,11 +24,11 @@ A robust, Java-based multi-agent system designed for automated customer support.
 - **Specialized Billing Logic**:
     - **Agent B (Billing)**: Equipped with specific capabilities including Plan/Price confirmation, Refund Policy outlining, and Support Case initiation.
 - **Action Triggering**: Detects specific user needs (like refund requests) and generates structured action tags (e.g., `[ACTION:INITIATE_REFUND]`).
-- **Zero-Dependency Agentic Core**: Built using pure Java 25, `java.net.http`, and `Gson` to showcase deep understanding of LLM integration and prompt engineering.
+- **Zero-Dependency Agentic Core**: Built using pure Java 16, `java.net.http`, and `Gson` to showcase deep understanding of LLM integration and prompt engineering.
 
 ##  Tech Stack
 
-- **Language**: Java 25 (OpenJDK)
+- **Language**: Java 16 (OpenJDK)
 - **LLM**: Google Gemini 3 Flash (via REST API)
 - **JSON Processing**: Google Gson
 - **Communication**: Java HttpClient (Standard Library)
@@ -64,8 +64,9 @@ To run the tests locally, use:
 mvn test
 ```
 
-Running the Project
+## Running the Project
+
 ```bash
-mvn clean compile exec:java
+mvn clean compile exec:java -Dexec.mainClass="me.ather.support.Main"
 ```
 
