@@ -17,18 +17,17 @@ class DocumentServiceTest {
     @Test
     @DisplayName("Should retrieve technical help for 404 error code")
     void shouldReturnErrorInstructions() {
-        // Matches your logic: '404' triggers the 'error' key in knowledgeBase
+        // Technical lookup for error code patterns
         String result = documentService.findRelevantContext("I have a 404 error");
 
         assertNotNull(result);
-        // Your service adds a "- " prefix to snippets
         assertTrue(result.contains("Reset' for 5s"), "Result should contain the 404 fix");
     }
 
     @Test
     @DisplayName("Should retrieve API details when webhooks are mentioned")
     void shouldReturnWebhookInfo() {
-        // Matches your logic: 'webhook' triggers the 'webhook' key
+        // Validation of keyword-based retrieval for API topics
         String result = documentService.findRelevantContext("Tell me about webhooks");
 
         assertNotNull(result);
@@ -38,7 +37,7 @@ class DocumentServiceTest {
     @Test
     @DisplayName("Should return specific fallback message for unknown topics")
     void shouldHandleUnknownKeywords() {
-        // Testing the "No specific documentation found" response
+        // Verification of fallback behavior for out-of-scope queries
         String result = documentService.findRelevantContext("How is the weather?");
 
         assertTrue(result.contains("No specific documentation found"), "Should use the defined fallback string");
@@ -47,7 +46,7 @@ class DocumentServiceTest {
     @Test
     @DisplayName("Should combine multiple snippets for complex queries")
     void shouldAggregateContext() {
-        // Testing your StringBuilder loop with two keywords: 'battery' (specs) and 'install' (setup)
+        // Multi-source context aggregation test
         String result = documentService.findRelevantContext("battery install");
 
         assertTrue(result.contains("CR2032") && result.contains("mobile app"),
