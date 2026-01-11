@@ -44,6 +44,28 @@ For security, the application retrieves the API key from an environment variable
 
 ```bash
 GEMINI_API_KEY=your_actual_api_key_here
+```
 
 
+##  Quality Assurance & Testing
+
+The system includes a suite of unit tests to ensure the reliability of the RAG (Retrieval-Augmented Generation) logic and context aggregation.
+
+### Automated Test Suite
+I have implemented JUnit 5 tests to verify:
+- **Keyword-based retrieval**: Accurate mapping of error codes (e.g., 404) to solutions.
+- **Context Aggregation**: Combining multiple documentation snippets for complex queries.
+- **Fallback Reliability**: Ensuring safe handling of out-of-scope user questions.
+
+![Unit Tests Pass](Tests.png)
+
+To run the tests locally, use:
+```bash
+mvn test
+```
+
+Running the Project
+```bash
+mvn clean compile exec:java
+```
 
