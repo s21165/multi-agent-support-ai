@@ -1,72 +1,75 @@
-# Multi-Agent Conversational AI Support System
+# AI Customer Support System - Multi-Agent & RAG Architecture
 
+## Project Overview
+A robust, Java-based multi-agent system designed for automated customer support. This project demonstrates a production-ready orchestration layer and specialized AI agents built from scratch using **Google Gemini 3 Flash**. 
 
-## Project Demonstration
+Unlike standard implementations, this system avoids high-level abstractions like LangChain or Spring AI to showcase a deep understanding of LLM integration, prompt engineering, and vector-based information retrieval.
 
-The following screenshot illustrates a complete, multi-turn conversation flow within the system:
+## Key Technical Features
 
-![System Demo](Alive.png)
+### 1. Semantic RAG (Retrieval-Augmented Generation)
+- **Vector Search Engine**: Implemented a custom retrieval system using **Cosine Similarity** to match user queries with internal documentation.
+- **Embedding Integration**: Utilizes `text-embedding-004` to transform raw text into high-dimensional vectors, enabling semantic understanding beyond simple keyword matching.
+- **Fact-Grounding**: Agent A (Technical Specialist) is strictly grounded in the provided knowledge base, preventing hallucinations for out-of-scope queries.
 
-### What is happening here?
-1. **Agent A (Technical RAG)**: The user asks about a "404 error". The system successfully retrieves specific troubleshooting steps (the 5-second Reset solution) from the internal Knowledge Base.
-2. **Fact-Grounding Guardrails**: When asked about a "Satellite Uplink" (which is not in our documentation), the agent adheres to the **No-Guessing Policy** and politely declines to speculate.
-3. **Intent Switching to Agent B**: Once the user requests a refund, the Orchestrator instantly switches the context to the **Billing Agent**.
-4. **Action Tag Generation**: Agent B provides the refund policy and generates a structured `[ACTION:INITIATE_REFUND]` tag, ready to be consumed by a backend service.
+### 2. Multi-Agent Orchestration
+- **Intent-Based Routing**: A central Orchestrator classifies user intent in real-time and dynamically switches context between specialized agents (Technical vs. Billing).
+- **State Management**: Maintains conversation history across agent transitions to ensure a seamless user experience.
 
-A robust, Java-based multi-agent system designed for automated customer support. This project demonstrates how to build an intelligent orchestration layer and specialized AI agents from scratch using **Google Gemini 3 Flash**, without relying on high-level libraries like LangChain or Spring AI.
+### 3. Automated Tool Calling
+- **Action Execution**: Agent B (Billing) can trigger real-world actions, such as initiating refund tickets via the `BillingService`.
+- **Validation logic**: Integrated defensive programming in service layers to validate inputs before processing sensitive financial operations.
 
-##  Key Features
-
-- **Intent-Based Orchestration**: A central router classifies user intent and dynamically switches between specialized agents within a single, multi-turn conversation.
-- **Hybrid RAG (Retrieval-Augmented Generation)**: 
-    - **Agent A (Technical)**: Powered by a custom indexing service. It retrieves relevant context from an internal Knowledge Base service (covering Error Codes, API protocols, Hardware specs, and Setup procedures) to ensure responses are grounded in facts.
-    - **No Guessing Policy**: If documentation does not cover the query, the agent gracefully asks for clarification.
-- **Specialized Billing Logic**:
-    - **Agent B (Billing)**: Equipped with specific capabilities including Plan/Price confirmation, Refund Policy outlining, and Support Case initiation.
-- **Action Triggering**: Detects specific user needs (like refund requests) and generates structured action tags (e.g., `[ACTION:INITIATE_REFUND]`).
-- **Zero-Dependency Agentic Core**: Built using pure Java 16, `java.net.http`, and `Gson` to showcase deep understanding of LLM integration and prompt engineering.
-
-##  Tech Stack
-
+## Tech Stack
 - **Language**: Java 16 (OpenJDK)
-- **LLM**: Google Gemini 3 Flash (via REST API)
-- **JSON Processing**: Google Gson
-- **Communication**: Java HttpClient (Standard Library)
+- **Build Tool**: Maven
+- **LLM**: Google Gemini 3 Flash
+- **JSON Handling**: Google Gson
+- **Testing**: JUnit 5, Mockito (for LLM and Service isolation)
 
-## Setup & Installation
+## Project Structure
+- `me.ather.support.service`: Core business logic (RAG engine, Billing operations, LLM Client).
+- `me.ather.support.model`: Data structures (Records) for API communication and message history.
+- `me.ather.support`: Main entry point and Agent Orchestrator.
 
-### 1. Prerequisites
-- JDK 21 or higher installed.
-- A valid Google Gemini API Key.
+## Demonstration & Sample Query
 
-### 2. Environment Configuration
-For security, the application retrieves the API key from an environment variable. Set it in your IDE (Run/Debug Configurations) or System:
+### Professional Conversation Flow
+To see the system in action, try the following multi-turn query:
 
-```bash
-GEMINI_API_KEY=your_actual_api_key_here
-```
+**Query:** > "I'm having trouble with my Hub-v3, what battery does it use? Also, the device arrived damaged, so I would like to request a refund."
 
+**Expected System Behavior:**
+1. **RAG Retrieval**: The system identifies the Hub-v3 hardware context and retrieves the "CR2032" battery specification.
+2. **Intent Switching**: The Orchestrator detects the refund request and hands over the conversation to Agent B.
+3. **Tool Execution**: Agent B triggers the `initiateRefund` tool, generating a unique Ticket ID (e.g., REF-4921).
 
-##  Quality Assurance & Testing
+![System Conversation Demo](SystemDemo.png)
 
-The system includes a suite of unit tests to ensure the reliability of the RAG (Retrieval-Augmented Generation) logic and context aggregation.
+## Quality Assurance
 
-### Automated Test Suite
-I have implemented JUnit 5 tests to verify:
-- **Keyword-based retrieval**: Accurate mapping of error codes (e.g., 404) to solutions.
-- **Context Aggregation**: Combining multiple documentation snippets for complex queries.
-- **Fallback Reliability**: Ensuring safe handling of out-of-scope user questions.
+The project includes a comprehensive test suite to ensure the reliability of the semantic search and billing logic.
 
-![Unit Tests Pass](Tests.png)
+### Unit Testing Strategy
+- **Service Isolation**: Used **Mockito** to mock LLM responses, allowing for deterministic testing of the RAG retrieval logic without API costs or latency.
+- **Edge Case Coverage**: Validated threshold-based search failures and empty input handling in financial tools.
 
-To run the tests locally, use:
-```bash
-mvn test
-```
+![Unit Test Results](TestResults.png)
 
-## Running the Project
+## Setup & Running
 
-```bash
-mvn clean compile exec:java -Dexec.mainClass="me.ather.support.Main"
-```
+1. **Set API Key**:
+   ```bash
+   export GEMINI_API_KEY=your_api_key
+   ```
+   
+2. ***Run tests***:
+   ```bash
+   mvn test
+   ```
+   
+3. ***Run apliccation:
+   ```bash
+   mvn clean compile exec:java
+   ```
 

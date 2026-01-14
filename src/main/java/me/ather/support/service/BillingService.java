@@ -1,4 +1,4 @@
-package me.ather.support;
+package me.ather.support.service;
 
 /**
  * Service handling billing policies, pricing, and refund processes.

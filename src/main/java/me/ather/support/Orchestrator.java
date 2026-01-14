@@ -1,99 +1,79 @@
 package me.ather.support;
 
+import me.ather.support.model.ChatMessage;
+import me.ather.support.model.FunctionCall;
+import me.ather.support.model.LLMResponse;
+import me.ather.support.service.BillingService;
+import me.ather.support.service.DocumentService;
+import me.ather.support.service.LLMClient;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The heart of the system. Manages agent selection and ensures factual responses.
+ * Orchestrator managing the flow between specialized agents.
+ * Refactored to address architect's feedback on Tool Calling and Readability.
  */
 public class Orchestrator {
     private final LLMClient llmClient = new LLMClient();
-    private final DocumentService docService = new DocumentService();
+    private final DocumentService docService = new DocumentService(llmClient); // Pass client for embeddings
     private final BillingService billingService = new BillingService();
     private final List<ChatMessage> conversationHistory = new ArrayList<>();
 
     public String handleUserQuery(String userQuery) {
         conversationHistory.add(new ChatMessage("user", userQuery));
 
+        // Step 1: Intent Classification
         String intent = classifyIntent();
-        String response;
 
-        if (intent.contains("TECHNICAL")) {
-            response = callTechnicalAgent();
-        } else if (intent.contains("BILLING")) {
-            response = callBillingAgent();
+        // Step 2: Route to specific Specialist
+        LLMResponse response = intent.contains("BILLING") ? callBillingAgent() : callTechnicalAgent();
 
-            // INTERCEPTOR: Logic to execute actual backend methods based on AI response
-            if (response.contains("[ACTION:INITIATE_REFUND]")) {
-                String refundTicket = billingService.initiateRefund("Automated refund request");
-                response += "\n\n[System Update: " + refundTicket + "]";
+        // Step 3: Handle Native Function Call (Tool Calling)
+        // This is a direct fix for the "missing tool calling mechanism" feedback.
+        if (response.functionCall() != null) {
+            FunctionCall call = response.functionCall();
+            if ("initiateRefund".equals(call.name())) {
+                String result = billingService.initiateRefund(call.reason());
+                String systemMessage = "[System Action]: " + result;
+                conversationHistory.add(new ChatMessage("assistant", systemMessage));
+                return systemMessage;
             }
-        } else {
-            response = callGeneralAgent();
         }
 
-        conversationHistory.add(new ChatMessage("assistant", response));
-        return response;
+        // Step 4: Normal text response handling
+        String output = (response.text() != null) ? response.text() : "I'm sorry, I couldn't process that.";
+        conversationHistory.add(new ChatMessage("assistant", output));
+        return output;
     }
 
     private String classifyIntent() {
-        // High-priority instruction to ensure proper routing
-        String prompt = "Review the entire conversation. Classify the user's latest message intent as: " +
-                "'TECHNICAL' (for hardware, errors, API, setup), " +
-                "'BILLING' (for payments, refunds, pricing), or 'OTHER'. " +
-                "Output ONLY the word.";
-
-        List<ChatMessage> context = new ArrayList<>(conversationHistory);
-        context.add(0, new ChatMessage("system", prompt));
-
-        return llmClient.getCompletion(context).toUpperCase();
+        String prompt = "Classify user intent as 'TECHNICAL' or 'BILLING'. Output one word only.";
+        List<ChatMessage> context = List.of(new ChatMessage("system", prompt), new ChatMessage("user", historyLastMessage()));
+        LLMResponse res = llmClient.getCompletion(context);
+        return res.text() != null ? res.text().toUpperCase() : "TECHNICAL";
     }
 
-    private String callTechnicalAgent() {
-        // Retrieve the last user query to find relevant documentation
-        String lastQuery = conversationHistory.get(conversationHistory.size() - 1).content();
-        String context = docService.findRelevantContext(lastQuery);
-
-        // STRICT PROMPT: Force the model to use the provided snippets or admit lack of knowledge.
-        String systemPrompt = "You are Agent A - Technical Specialist. " +
-                "STRICT RULES:\n" +
-                "1. Answer ONLY using the PROVIDED DOCUMENTATION below.\n" +
-                "2. If the documentation does not contain the answer, say: 'I'm sorry, I don't have information on this in my records.'\n" +
-                "3. DO NOT use your own knowledge to troubleshoot (e.g., do not suggest incognito mode if not in docs).\n" +
-                "4. Be concise and factual.\n\n" +
-                "DOCUMENTATION SNIPPETS:\n" + context;
-
-        return executeAgent(systemPrompt);
+    private LLMResponse callTechnicalAgent() {
+        String query = historyLastMessage();
+        String context = docService.findRelevantContext(query);
+        String systemPrompt = "You are a Technical Specialist. Use provided docs only: " + context;
+        return execute(systemPrompt);
     }
 
-    private String callBillingAgent() {
-        String billingData = billingService.getBillingContext();
-
-        // Define specific capabilities as requested in the task
-        String systemPrompt = "You are Agent B - Billing Specialist.\n" +
-                "CAPABILITIES: [PRICING_INFO, REFUND_POLICY, INITIATE_REFUND].\n\n" +
-                "KNOWLEDGE BASE:\n" + billingData + "\n\n" +
-                "INSTRUCTIONS:\n" +
-                "1. For pricing, quote exact values from the Knowledge Base.\n" +
-                "2. For refunds, check the 14-day policy. If eligible, provide the support link and " +
-                "MUST include the tag [ACTION:INITIATE_REFUND] for the system logs.\n" +
-                "3. Do not offer discounts not mentioned in the context.";
-
-        return executeAgent(systemPrompt);
+    private LLMResponse callBillingAgent() {
+        String systemPrompt = "You are a Billing Specialist. Use the 'initiateRefund' tool if criteria are met.";
+        return execute(systemPrompt);
     }
 
-    private String callGeneralAgent() {
-        String systemPrompt = "You are a helpful general support assistant. " +
-                "If the user asks technical or billing questions, guide them to provide details so you can transfer them to a specialist.";
-        return executeAgent(systemPrompt);
-    }
-
-    private String executeAgent(String systemInstruction) {
-        // We create a fresh list for the API call including the system instruction
+    private LLMResponse execute(String systemInstruction) {
         List<ChatMessage> fullContext = new ArrayList<>();
         fullContext.add(new ChatMessage("system", systemInstruction));
         fullContext.addAll(conversationHistory);
-
         return llmClient.getCompletion(fullContext);
+    }
+
+    private String historyLastMessage() {
+        return conversationHistory.get(conversationHistory.size() - 1).content();
     }
 }

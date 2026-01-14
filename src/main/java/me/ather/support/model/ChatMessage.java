@@ -1,4 +1,4 @@
-package me.ather.support;
+package me.ather.support.model;
 
 /**
  * Represents a single message within a conversation.
